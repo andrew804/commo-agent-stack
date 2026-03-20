@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+
 const ACTIONS = {
   create_task: { endpoint: "create-task", required: ["title"] },
   get_task: { endpoint: "get-task", required: ["id"] },
@@ -8,11 +10,55 @@ const ACTIONS = {
 } as const;
 
 type Action = keyof typeof ACTIONS;
-
 type JsonRecord = Record<string, unknown>;
+
+type SecretMap = Record<string, string>;
+
+const SOPS_REF_PREFIX = "sops://";
+const DEFAULT_SOPS_FILE = `${process.env.HOME || ""}/.openclaw/secrets/secrets.enc.json`;
+
+let sopsCache: SecretMap | null = null;
 
 function asRecord(v: unknown): JsonRecord {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as JsonRecord) : {};
+}
+
+function loadSopsSecrets(): SecretMap {
+  if (sopsCache) return sopsCache;
+
+  const raw = execFileSync("sops", ["-d", DEFAULT_SOPS_FILE], { encoding: "utf8" });
+  const parsed = JSON.parse(raw);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Invalid SOPS secrets document");
+  }
+
+  const out: SecretMap = {};
+  for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof v === "string") out[k] = v;
+  }
+  sopsCache = out;
+  return out;
+}
+
+function resolveSecretRef(rawValue: string, keyName: string): string {
+  const value = String(rawValue ?? "").trim();
+  if (!value) return "";
+
+  if (!value.startsWith(SOPS_REF_PREFIX)) {
+    return value;
+  }
+
+  const secretKey = value.slice(SOPS_REF_PREFIX.length).trim();
+  if (!secretKey) {
+    throw new Error(`Invalid secret ref for ${keyName}: missing key name`);
+  }
+
+  const secrets = loadSopsSecrets();
+  const resolved = String(secrets[secretKey] ?? "").trim();
+  if (!resolved) {
+    throw new Error(`Missing SOPS secret for ${keyName}: ${secretKey}`);
+  }
+  return resolved;
 }
 
 function getCommoEnv(api: any): { root: string; token: string; envName: string } {
@@ -30,7 +76,7 @@ function getCommoEnv(api: any): { root: string; token: string; envName: string }
   const tokenKey = envName === "prod" ? "COMMO_PROD_API_TOKEN" : "COMMO_DEV_API_TOKEN";
 
   const root = String(envCfg[rootKey] ?? "").trim().replace(/\/+$/, "");
-  const token = String(envCfg[tokenKey] ?? "").trim();
+  const token = resolveSecretRef(String(envCfg[tokenKey] ?? ""), tokenKey);
 
   if (!root || !token) {
     throw new Error(`Commo env is not configured: missing ${rootKey} and/or ${tokenKey}`);
