@@ -5,7 +5,7 @@ Commo task-control skill for OpenClaw agents.
 ## What matters for agents
 
 - `SKILL.md` is the authoritative skill definition.
-- `scripts/commo-task.mjs` is the CLI helper used by the skill.
+- `commo-task.mjs` is the CLI helper used by the skill.
 - `references/api.md` contains endpoint and payload reference details.
 
 ## Environment setup
@@ -21,11 +21,11 @@ Set both environments and switch with `COMMO_ENV`:
 ## Quick test
 
 ```bash
-COMMO_ENV=dev node scripts/commo-task.mjs search_tasks '{"limit":1}'
+COMMO_ENV=dev node commo-task.mjs search_tasks '{"limit":1}'
 ```
 
 ## Repository Layout
 
-- `SKILL.md`, `scripts/`, `references/` — Commo skill and script assets
+- `SKILL.md`, `references/` — Commo skill guidance/assets
 - `plugins/commo-workflow/` — OpenClaw plugin that exposes dedicated `commo_task` tool (no shell `exec` required for org agent)
 
