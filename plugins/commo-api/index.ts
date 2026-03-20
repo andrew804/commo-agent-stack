@@ -18,9 +18,9 @@ function asRecord(v: unknown): JsonRecord {
 function getCommoEnv(api: any): { root: string; token: string; envName: string } {
   const cfg = api?.runtime?.config?.loadConfig?.() ?? {};
   const envCfg =
-    cfg?.skills?.entries?.["commo-control"]?.env &&
-    typeof cfg.skills.entries["commo-control"].env === "object"
-      ? cfg.skills.entries["commo-control"].env
+    cfg?.skills?.entries?.["commo-api"]?.env &&
+    typeof cfg.skills.entries["commo-api"].env === "object"
+      ? cfg.skills.entries["commo-api"].env
       : {};
 
   const envNameRaw = String(envCfg.COMMO_ENV ?? "dev").toLowerCase();
