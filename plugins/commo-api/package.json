@@ -1,5 +1,5 @@
 {
-  "name": "@local/commo-workflow",
+  "name": "@local/commo-api",
   "version": "0.0.1",
   "private": true,
   "type": "module",

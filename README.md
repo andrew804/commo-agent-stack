@@ -27,5 +27,5 @@ COMMO_ENV=dev node commo-task.mjs search_tasks '{"limit":1}'
 ## Repository Layout
 
 - `SKILL.md`, `references/` — Commo skill guidance/assets
-- `plugins/commo-workflow/` — OpenClaw plugin that exposes dedicated `commo_task` tool (no shell `exec` required for org agent)
+- `plugins/commo-api/` — OpenClaw plugin that exposes dedicated `commo_task` tool (no shell `exec` required for org agent)
 
