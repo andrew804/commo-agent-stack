@@ -1,16 +1,16 @@
-# commo-agent-skill
+# commo-agent-stack
 
-Commo task-control skill for OpenClaw agents.
+Commo integration stack for OpenClaw: **skill guidance + commo-api plugin runtime**.
 
-## What matters for agents
+## Components
 
-- `SKILL.md` is the authoritative skill definition.
-- `scripts/commo-task.mjs` is the CLI helper used by the skill.
-- `references/api.md` contains endpoint and payload reference details.
+- `SKILL.md` — behavior guidance for using Commo workflows
+- `plugins/commo-api/` — dedicated `commo_task` runtime tool
+- `references/api.md` — endpoint/payload reference
 
-## Environment setup
+## Runtime config (OpenClaw)
 
-Set both environments and switch with `COMMO_ENV`:
+Configure under `skills.entries.commo-api.env`:
 
 - `COMMO_ENV=dev|prod`
 - `COMMO_DEV_WORKFLOW_ROOT`
@@ -18,15 +18,18 @@ Set both environments and switch with `COMMO_ENV`:
 - `COMMO_PROD_WORKFLOW_ROOT`
 - `COMMO_PROD_API_TOKEN`
 
-## Quick test
+## SecretRef usage
 
-```bash
-COMMO_ENV=dev node scripts/commo-task.mjs search_tasks '{"limit":1}'
-```
+Use refs instead of plaintext tokens:
 
-
-## Secret References
-Use secret refs in config instead of plaintext tokens:
 - `COMMO_DEV_API_TOKEN=sops://COMMO_DEV_API_TOKEN`
 - `COMMO_PROD_API_TOKEN=sops://COMMO_PROD_API_TOKEN`
-The plugin resolves these refs from `~/.openclaw/secrets/secrets.enc.json` at runtime.
+
+The plugin resolves `sops://...` token refs from `~/.openclaw/secrets/secrets.enc.json` at runtime.
+
+## Security posture (org agent)
+
+Recommended org-facing agent policy:
+
+- allow: `commo_task` (and optional `read`)
+- deny: runtime shell tools (`exec`, `process`, `bash`) and cross-session tooling
