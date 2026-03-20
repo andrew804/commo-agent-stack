@@ -5,7 +5,7 @@ description: Control the Commo service through workflow API endpoints for task C
 
 # Commo Control
 
-Use this skill to perform task operations in the Commo service via authenticated workflow APIs.
+Use this skill with the dedicated `commo_task` plugin tool to perform task operations in Commo.
 
 ## Quick Start
 
@@ -16,14 +16,15 @@ Use this skill to perform task operations in the Commo service via authenticated
    - `COMMO_DEV_API_TOKEN`
    - `COMMO_PROD_WORKFLOW_ROOT`
    - `COMMO_PROD_API_TOKEN`
-3. Run the tool script:
-   - `node scripts/commo-task.mjs create_task '{"title":"Example"}'`
+3. Call the `commo_task` tool with:
+   - `action`
+   - `payload` (JSON object)
 
 ## Environment Selection
 
 - `COMMO_ENV=dev` uses `COMMO_DEV_WORKFLOW_ROOT` + `COMMO_DEV_API_TOKEN`
 - `COMMO_ENV=prod` uses `COMMO_PROD_WORKFLOW_ROOT` + `COMMO_PROD_API_TOKEN`
-- No default URL is embedded in the script; environment variables are required.
+- No default URL is embedded; environment variables are required.
 
 ## Supported Actions
 
@@ -42,11 +43,11 @@ Use this skill to perform task operations in the Commo service via authenticated
 4. Include bearer token header: `Authorization: Bearer ...`.
 5. Normalize output and surface `ok`, `status`, and `response`.
 
-## Notes
+## Security Notes
 
+- Prefer plugin tool access over shell execution.
+- For locked-down org agents, allow only `commo_task` (and optional `read`) and deny runtime shell tools.
 - Prefer `archive_task` over hard delete.
-- Keep status values consistent (`open`, `in_progress`, `done`, `archived`).
-- Use `dev` for validation and `prod` only after verification.
 
 ## References
 

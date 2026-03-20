@@ -1,0 +1,12 @@
+{
+  "name": "@local/commo-api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "commo-api",
+  "name": "Commo API Tool",
+  "description": "Dedicated Commo workflow tool for task CRUD/search operations.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
