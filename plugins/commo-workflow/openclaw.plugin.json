@@ -1,0 +1,10 @@
+{
+  "id": "commo-workflow",
+  "name": "Commo Workflow Tool",
+  "description": "Dedicated Commo workflow tool for task CRUD/search operations.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

@@ -23,3 +23,9 @@ Set both environments and switch with `COMMO_ENV`:
 ```bash
 COMMO_ENV=dev node scripts/commo-task.mjs search_tasks '{"limit":1}'
 ```
+
+## Repository Layout
+
+- `SKILL.md`, `scripts/`, `references/` — Commo skill and script assets
+- `plugins/commo-workflow/` — OpenClaw plugin that exposes dedicated `commo_task` tool (no shell `exec` required for org agent)
+
