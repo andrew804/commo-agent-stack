@@ -1,9 +1,9 @@
 ---
 name: commo-api
-description: Control the Commo service through workflow API endpoints for task CRUD operations (create, read, update, archive, search). Use when the user asks to manage tasks in Commo, seed test tasks, or run operational checks against Commo task workflows.
+description: Operate the Commo service via workflow API endpoints for task CRUD/search operations. Use when users need to create, read, update, archive, search, or seed Commo tasks.
 ---
 
-# Commo Control
+# Commo API
 
 Use this skill with the dedicated `commo_task` plugin tool to perform task operations in Commo.
 
