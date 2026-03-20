@@ -1,25 +1,35 @@
 # commo-agent-stack
 
-Commo agent stack for OpenClaw: skill guidance + dedicated API plugin.
+Commo integration stack for OpenClaw: **skill guidance + commo-api plugin runtime**.
 
-## What matters for agents
+## Components
 
-- `SKILL.md` is the authoritative skill definition.
-- `references/api.md` contains endpoint and payload reference details.
-- `plugins/commo-api/` provides the dedicated `commo_task` tool.
+- `SKILL.md` — behavior guidance for using Commo workflows
+- `plugins/commo-api/` — dedicated `commo_task` runtime tool
+- `references/api.md` — endpoint/payload reference
 
-## Runtime configuration
+## Runtime config (OpenClaw)
 
-Set values (or SecretRefs) under:
+Configure under `skills.entries.commo-api.env`:
 
-- `skills.entries.commo-api.env.COMMO_ENV`
-- `skills.entries.commo-api.env.COMMO_DEV_WORKFLOW_ROOT`
-- `skills.entries.commo-api.env.COMMO_DEV_API_TOKEN`
-- `skills.entries.commo-api.env.COMMO_PROD_WORKFLOW_ROOT`
-- `skills.entries.commo-api.env.COMMO_PROD_API_TOKEN`
+- `COMMO_ENV=dev|prod`
+- `COMMO_DEV_WORKFLOW_ROOT`
+- `COMMO_DEV_API_TOKEN`
+- `COMMO_PROD_WORKFLOW_ROOT`
+- `COMMO_PROD_API_TOKEN`
 
-## Repository layout
+## SecretRef usage
 
-- `SKILL.md` — Commo skill guidance
-- `references/` — API endpoint and payload references
-- `plugins/commo-api/` — dedicated OpenClaw plugin tool for Commo API actions
+Use refs instead of plaintext tokens:
+
+- `COMMO_DEV_API_TOKEN=sops://COMMO_DEV_API_TOKEN`
+- `COMMO_PROD_API_TOKEN=sops://COMMO_PROD_API_TOKEN`
+
+The plugin resolves `sops://...` token refs from `~/.openclaw/secrets/secrets.enc.json` at runtime.
+
+## Security posture (org agent)
+
+Recommended org-facing agent policy:
+
+- allow: `commo_task` (and optional `read`)
+- deny: runtime shell tools (`exec`, `process`, `bash`) and cross-session tooling
