@@ -1,56 +1,48 @@
-# commo-agent-stack
+# COPS Admin Agent
 
-Commo membership platform integration for OpenClaw: **skill guidance + commo-api plugin runtime**.
+AI administrative assistant for **City of Peterborough Swimming Club (COPS)**.
 
-Gives AI agents full access to the Commo API: members, invoices, billing, subscriptions, payments, reconciliation, GoCardless, leadership, join requests, settings, and API key management.
+This OpenClaw plugin gives an AI agent full administrative access to the COPS club management system. The agent can manage swimmers, chase fees, generate invoices, reconcile bank statements, approve new members, and handle committee roles.
 
-## Components
+## What the agent can do
 
-- `SKILL.md` — behavior guidance and API domain overview
-- `plugins/commo-api/` — `commo_api` runtime tool (generic HTTP proxy)
-- `references/api.md` — complete endpoint reference with parameters
+- **Swimmers & families** — look up, create, pause, resume, handle leavers
+- **Invoices & payments** — create, issue, record payments, chase overdue, write off
+- **Subscriptions & plans** — manage squad plans (Performance, Development, etc.), handle plan changes
+- **Direct debit** — sync GoCardless payments, create mandates, view payouts
+- **Bank reconciliation** — import statements, match transactions, export reports
+- **Committee roles** — manage Chair, Treasurer, Secretary roles and assignments
+- **New members** — approve/reject join requests, manage join codes
+- **Club settings** — update name, description
 
-## Runtime config (OpenClaw)
+## Setup
 
 Configure under `skills.entries.commo-api.env`:
 
-- `COMMO_ENV=dev|prod`
-- `COMMO_DEV_BASE_URL` — dev server URL (e.g. `http://localhost:8787`)
-- `COMMO_DEV_API_KEY` — dev API key (`cmk_...`)
-- `COMMO_PROD_BASE_URL` — prod server URL
-- `COMMO_PROD_API_KEY` — prod API key (`cmk_...`)
-
-## Creating an API key
-
-API keys are created via the Commo API itself (admin only):
-
 ```
-POST /api/api-keys
-Body: { "name": "Production Agent" }
-Response: { "id": 1, "key": "cmk_...", "prefix": "cmk_abcd1234", "name": "Production Agent" }
+COMMO_ENV=prod
+COMMO_PROD_BASE_URL=http://129.212.160.40
+COMMO_PROD_API_KEY=cmk_...
 ```
 
-The raw key is returned once on creation. Store it securely.
+The API key is created by a COPS admin via the club management system. It grants admin-level access scoped to COPS only.
 
-## SecretRef usage
+## Components
 
-Use refs instead of plaintext keys:
+- `SKILL.md` — agent personality and capability guide (framed around COPS operations)
+- `plugins/commo-api/` — `commo_api` runtime tool
+- `references/api.md` — full endpoint reference
 
-- `COMMO_DEV_API_KEY=sops://COMMO_DEV_API_KEY`
-- `COMMO_PROD_API_KEY=sops://COMMO_PROD_API_KEY`
+## Security
 
-The plugin resolves `sops://...` refs from `~/.openclaw/secrets/secrets.enc.json` at runtime.
+- API key is scoped to COPS only (one club, one key)
+- Actions attributed to the admin who created the key
+- Key auto-revokes if the admin loses committee access
+- Rate limited to 60 req/min
+- Recommended policy: allow `commo_api` only, deny shell tools
 
-## Security posture (org agent)
+## What the agent can't do
 
-Recommended org-facing agent policy:
-
-- allow: `commo_api` (and optional `read`)
-- deny: runtime shell tools (`exec`, `process`, `bash`) and cross-session tooling
-
-## Excluded routes
-
-The plugin handles all JSON REST endpoints. These are excluded:
-- Multipart uploads (logo, avatar) — use the web UI
-- GoCardless OAuth redirect flows — browser-based
-- Inbound webhooks — the server receives these
+- Upload images (club logo, member photos) — use the web dashboard
+- Connect GoCardless — browser-based OAuth flow
+- Receive webhooks — the server handles these automatically

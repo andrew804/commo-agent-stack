@@ -66,7 +66,7 @@ export default function register(api: any) {
     {
       name: "commo_api",
       description:
-        "Call any Commo API endpoint. Supports all JSON REST endpoints (members, invoices, billing, subscriptions, leadership, join requests, reconciliation, GoCardless, settings, api-keys). Does NOT support multipart uploads (logo/avatar) or OAuth redirect flows. See references/api.md for the full endpoint reference.",
+        "Administer City of Peterborough Swimming Club (COPS). Manage swimmers, families, invoices, payments, subscriptions, committee roles, join requests, bank reconciliation, and GoCardless direct debits. See references/api.md for available operations.",
       parameters: {
         type: "object",
         additionalProperties: false,

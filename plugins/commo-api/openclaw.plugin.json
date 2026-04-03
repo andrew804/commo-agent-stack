@@ -1,7 +1,7 @@
 {
   "id": "commo-api",
-  "name": "Commo API Tool",
-  "description": "Full Commo membership platform API access: members, invoices, billing, subscriptions, payments, reconciliation, GoCardless, leadership, join requests, settings, and API keys.",
+  "name": "COPS Admin",
+  "description": "Administrative assistant for City of Peterborough Swimming Club. Manages swimmers, invoices, payments, subscriptions, committee roles, join requests, bank reconciliation, and direct debit collections.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
