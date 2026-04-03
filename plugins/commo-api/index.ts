@@ -1,17 +1,6 @@
 import { execFileSync } from "node:child_process";
 
-const ACTIONS = {
-  create_task: { endpoint: "create-task", required: ["title"] },
-  get_task: { endpoint: "get-task", required: ["id"] },
-  update_task: { endpoint: "update-task", required: ["id"] },
-  archive_task: { endpoint: "archive-task", required: ["id"] },
-  search_tasks: { endpoint: "search-tasks", required: [] },
-  seed_tasks: { endpoint: "seed-tasks", required: [] },
-} as const;
-
-type Action = keyof typeof ACTIONS;
 type JsonRecord = Record<string, unknown>;
-
 type SecretMap = Record<string, string>;
 
 const SOPS_REF_PREFIX = "sops://";
@@ -19,19 +8,13 @@ const DEFAULT_SOPS_FILE = `${process.env.HOME || ""}/.openclaw/secrets/secrets.e
 
 let sopsCache: SecretMap | null = null;
 
-function asRecord(v: unknown): JsonRecord {
-  return v && typeof v === "object" && !Array.isArray(v) ? (v as JsonRecord) : {};
-}
-
 function loadSopsSecrets(): SecretMap {
   if (sopsCache) return sopsCache;
-
   const raw = execFileSync("sops", ["-d", DEFAULT_SOPS_FILE], { encoding: "utf8" });
   const parsed = JSON.parse(raw);
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("Invalid SOPS secrets document");
   }
-
   const out: SecretMap = {};
   for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
     if (typeof v === "string") out[k] = v;
@@ -43,25 +26,16 @@ function loadSopsSecrets(): SecretMap {
 function resolveSecretRef(rawValue: string, keyName: string): string {
   const value = String(rawValue ?? "").trim();
   if (!value) return "";
-
-  if (!value.startsWith(SOPS_REF_PREFIX)) {
-    return value;
-  }
-
+  if (!value.startsWith(SOPS_REF_PREFIX)) return value;
   const secretKey = value.slice(SOPS_REF_PREFIX.length).trim();
-  if (!secretKey) {
-    throw new Error(`Invalid secret ref for ${keyName}: missing key name`);
-  }
-
+  if (!secretKey) throw new Error(`Invalid secret ref for ${keyName}: missing key name`);
   const secrets = loadSopsSecrets();
   const resolved = String(secrets[secretKey] ?? "").trim();
-  if (!resolved) {
-    throw new Error(`Missing SOPS secret for ${keyName}: ${secretKey}`);
-  }
+  if (!resolved) throw new Error(`Missing SOPS secret for ${keyName}: ${secretKey}`);
   return resolved;
 }
 
-function getCommoEnv(api: any): { root: string; token: string; envName: string } {
+function getCommoEnv(api: any): { baseUrl: string; apiKey: string; envName: string } {
   const cfg = api?.runtime?.config?.loadConfig?.() ?? {};
   const envCfg =
     cfg?.skills?.entries?.["commo-api"]?.env &&
@@ -72,72 +46,83 @@ function getCommoEnv(api: any): { root: string; token: string; envName: string }
   const envNameRaw = String(envCfg.COMMO_ENV ?? "dev").toLowerCase();
   const envName = envNameRaw === "prod" ? "prod" : "dev";
 
-  const rootKey = envName === "prod" ? "COMMO_PROD_WORKFLOW_ROOT" : "COMMO_DEV_WORKFLOW_ROOT";
-  const tokenKey = envName === "prod" ? "COMMO_PROD_API_TOKEN" : "COMMO_DEV_API_TOKEN";
+  const urlKey = envName === "prod" ? "COMMO_PROD_BASE_URL" : "COMMO_DEV_BASE_URL";
+  const tokenKey = envName === "prod" ? "COMMO_PROD_API_KEY" : "COMMO_DEV_API_KEY";
 
-  const root = String(envCfg[rootKey] ?? "").trim().replace(/\/+$/, "");
-  const token = resolveSecretRef(String(envCfg[tokenKey] ?? ""), tokenKey);
+  const baseUrl = String(envCfg[urlKey] ?? "").trim().replace(/\/+$/, "");
+  const apiKey = resolveSecretRef(String(envCfg[tokenKey] ?? ""), tokenKey);
 
-  if (!root || !token) {
-    throw new Error(`Commo env is not configured: missing ${rootKey} and/or ${tokenKey}`);
+  if (!baseUrl || !apiKey) {
+    throw new Error(`Commo env not configured: missing ${urlKey} and/or ${tokenKey}`);
   }
 
-  return { root, token, envName };
+  return { baseUrl, apiKey, envName };
 }
 
-function validateRequired(action: Action, payload: JsonRecord) {
-  const missing = ACTIONS[action].required.filter((k) => {
-    const v = payload[k];
-    return v === undefined || v === null || (typeof v === "string" && v.trim() === "");
-  });
-  if (missing.length > 0) {
-    throw new Error(`Missing required fields for ${action}: ${missing.join(", ")}`);
-  }
-}
+const ALLOWED_METHODS = new Set(["GET", "POST", "PATCH", "DELETE"]);
 
 export default function register(api: any) {
   api.registerTool(
     {
-      name: "commo_task",
+      name: "commo_api",
       description:
-        "Run approved Commo workflows only (create_task, get_task, update_task, archive_task, search_tasks, seed_tasks).",
+        "Call any Commo API endpoint. Supports all JSON REST endpoints (members, invoices, billing, subscriptions, leadership, join requests, reconciliation, GoCardless, settings, api-keys). Does NOT support multipart uploads (logo/avatar) or OAuth redirect flows. See references/api.md for the full endpoint reference.",
       parameters: {
         type: "object",
         additionalProperties: false,
         properties: {
-          action: {
+          method: {
             type: "string",
-            enum: Object.keys(ACTIONS),
+            enum: ["GET", "POST", "PATCH", "DELETE"],
+            description: "HTTP method",
           },
-          payload: {
+          path: {
+            type: "string",
+            description:
+              "API path, e.g. /api/members, /api/invoices/5, /api/invoices/5/actions",
+          },
+          body: {
             type: "object",
             additionalProperties: true,
+            description: "Request body (for POST/PATCH). Omit for GET/DELETE.",
           },
         },
-        required: ["action"],
+        required: ["method", "path"],
       },
-      async execute(_id: string, params: { action: Action; payload?: JsonRecord }) {
+      async execute(
+        _id: string,
+        params: { method: string; path: string; body?: JsonRecord },
+      ) {
         try {
-          const action = params?.action;
-          if (!action || !(action in ACTIONS)) {
-            throw new Error("Invalid action");
+          const method = (params?.method || "").toUpperCase();
+          if (!ALLOWED_METHODS.has(method)) {
+            throw new Error(
+              `Invalid method: ${method}. Use GET, POST, PATCH, or DELETE.`,
+            );
           }
 
-          const payload = asRecord(params?.payload ?? {});
-          validateRequired(action, payload);
+          const path = params?.path || "";
+          if (!path.startsWith("/api/") && path !== "/health") {
+            throw new Error(
+              `Invalid path: ${path}. Must start with /api/ or be /health.`,
+            );
+          }
 
-          const { root, token, envName } = getCommoEnv(api);
-          const endpoint = ACTIONS[action].endpoint;
-          const url = `${root}/${endpoint}`;
+          const { baseUrl, apiKey, envName } = getCommoEnv(api);
+          const url = `${baseUrl}${path}`;
 
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(payload),
-          });
+          const headers: Record<string, string> = {
+            Authorization: `Bearer ${apiKey}`,
+          };
+
+          const fetchOpts: RequestInit = { method, headers };
+
+          if (params?.body && (method === "POST" || method === "PATCH")) {
+            headers["Content-Type"] = "application/json";
+            fetchOpts.body = JSON.stringify(params.body);
+          }
+
+          const res = await fetch(url, fetchOpts);
 
           let responseBody: unknown;
           try {
@@ -149,13 +134,14 @@ export default function register(api: any) {
           const out = {
             ok: res.ok,
             status: res.status,
-            action,
+            method,
+            path,
             env: envName,
             response: responseBody,
           };
 
           return {
-            content: [{ type: "text", text: JSON.stringify(out) }],
+            content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
           };
         } catch (err: any) {
           const out = {

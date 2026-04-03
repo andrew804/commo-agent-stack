@@ -1,7 +1,7 @@
 {
   "id": "commo-api",
   "name": "Commo API Tool",
-  "description": "Dedicated Commo workflow tool for task CRUD/search operations.",
+  "description": "Full Commo membership platform API access: members, invoices, billing, subscriptions, payments, reconciliation, GoCardless, leadership, join requests, settings, and API keys.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
